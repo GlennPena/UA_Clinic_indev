@@ -30,19 +30,27 @@ class AppointmentSerializer(serializers.ModelSerializer):
         return data
 
     def validate(self, data):
-        if data['date_time'] < timezone.now():
-            raise serializers.ValidationError("No past date allowed")
+        # Get values safely (for PATCH)
+        date_time = data.get('date_time', self.instance.date_time if self.instance else None)
+        doctor = data.get('doctor', self.instance.doctor if self.instance else None)
 
-        queryset = Appointment.objects.filter(
-            doctor=data['doctor'],
-            date_time=data['date_time']
-        )
+        # ✅ Only validate date if it's being changed
+        if 'date_time' in data:
+            if date_time < timezone.now():
+                raise serializers.ValidationError("No past date allowed")
 
-        if self.instance:
-            queryset = queryset.exclude(pk=self.instance.pk)
+        # ✅ Only check duplicate if doctor OR date_time changed
+        if 'doctor' in data or 'date_time' in data:
+            queryset = Appointment.objects.filter(
+                doctor=doctor,
+                date_time=date_time
+            )
 
-        if queryset.exists():
-            raise serializers.ValidationError("Duplicate schedule")
+            if self.instance:
+                queryset = queryset.exclude(pk=self.instance.pk)
+
+            if queryset.exists():
+                raise serializers.ValidationError("Duplicate schedule")
 
         return data
 

@@ -22,6 +22,18 @@ export default function AppointmentCard({ appointment, isAdmin, isDoctor, token,
     refresh();
   };
 
+  const remove = async () => {
+    try {
+      await API.delete(
+        `appointments/${appointment.id}/`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      refresh();
+    } catch (err) {
+      console.log("DELETE ERROR:", err.response?.data);
+    }
+  };
+
   const cancel = async () => {
     await API.patch(
       `appointments/${appointment.id}/`,
@@ -29,6 +41,10 @@ export default function AppointmentCard({ appointment, isAdmin, isDoctor, token,
       { headers: { Authorization: `Bearer ${token}` } }
     );
     refresh();
+  };
+
+  const edit = () => {
+    navigation.navigate("EditAppointment", { appointment, token });
   };
 
   return (
@@ -41,11 +57,53 @@ export default function AppointmentCard({ appointment, isAdmin, isDoctor, token,
       <Text>Date: {appointment.date_time}</Text>
       <Text>Condition: {appointment.condition}</Text>
 
-      {(isAdmin || isDoctor) && (
+      {/* ADMIN: only delete */}
+      {isAdmin && (
+        <Button title="Delete" onPress={remove} />
+      )}
+
+      {/* DOCTOR actions */}
+      {!isAdmin && isDoctor && (
         <>
-          <Button title="Approve" onPress={approve} />
-          <Button title="Reject" onPress={reject} />
-          <Button title="Cancel" onPress={cancel} />
+          {appointment.status === "Pending" && (
+            <>
+              <Button title="Approve" onPress={approve} />
+              <Button title="Reject" onPress={reject} />
+            </>
+          )}
+
+          {appointment.status === "Approved" && (
+            <Button title="Cancel" onPress={cancel} />
+          )}
+
+          {["Completed", "Cancelled", "Rejected"].includes(appointment.status) && (
+            <Button title="Delete" onPress={remove} />
+          )}
+        </>
+      )}
+
+      {/* PATIENT ACTIONS */}
+      {!isAdmin && !isDoctor && (
+        <>
+          {/* Pending */}
+          {appointment.status === "Pending" && (
+            <>
+              <Button title="Edit" onPress={edit} />
+              <Button title="Cancel" onPress={cancel} />
+            </>
+          )}
+
+          {/* Approved */}
+          {appointment.status === "Approved" && (
+            <Text style={{ color: "blue", marginTop: 5 }}>
+              Scheduled
+            </Text>
+          )}
+
+          {/* Rejected / Completed / Cancelled */}
+          {["Rejected", "Completed", "Cancelled"].includes(appointment.status) && (
+            <Button title="Delete" onPress={remove} />
+          )}
         </>
       )}
     </View>

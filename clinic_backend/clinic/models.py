@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.db import models
 from users.models import User
 
@@ -25,9 +26,13 @@ class Appointment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
-        """Track previous status before saving."""
+        # Auto complete if past and approved
+        if self.status == "Approved" and self.date_time < timezone.now():
+            self.status = "Completed"
+
         if self.pk:
             old = Appointment.objects.get(pk=self.pk)
             if old.status != self.status:
                 self.last_status = old.status
+
         super().save(*args, **kwargs)
